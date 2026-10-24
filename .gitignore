@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+
+data/raw/HI-Small_Trans.csv
+data/clean/
+data/final/
