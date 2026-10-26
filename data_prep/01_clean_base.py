@@ -1,17 +1,3 @@
-"""Step 1 - clean the raw IBM AMLworld HI-Small transaction file.
-
-Input : data/raw/HI-Small_Trans.csv
-Output: data/clean/transactions_base.parquet
-
-What it does
-  * reads bank/account codes as strings (leading zeros matter: "011" != "11")
-  * keeps only same-currency rows and drops self-transfers ("Reinvestment")
-  * builds one account id per account: "<bank>_<account>"
-  * treats amounts as INR (relabel only, no rescaling)
-  * adds random seconds + milliseconds to the minute-level timestamps
-  * maps IBM payment formats to Indian channels (NEFT/RTGS/IMPS/UPI/...)
-  * sorts by time
-"""
 import sys
 
 import numpy as np
@@ -24,12 +10,6 @@ COLS = ["ts", "src_bank", "src_acct", "dst_bank", "dst_acct", "amt_recv", "cur_r
 
 
 def remap_channels(orig: np.ndarray, amount: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-    """IBM formats -> Indian channels.
-
-    ACH/Wire are spread over several channels on purpose. If every base row were
-    NEFT/RTGS while injected rows were IMPS/UPI, the channel column alone would
-    reveal which rows are injected (label leakage).
-    """
     n = len(orig)
     u = rng.random(n)
     out = np.full(n, "OTHER", dtype=object)
@@ -52,7 +32,7 @@ def remap_channels(orig: np.ndarray, amount: np.ndarray, rng: np.random.Generato
     out[orig == "Cheque"] = "CHEQUE"
     out[orig == "Cash"] = "CASH"
 
-    out[(out == "IMPS") & (amount > 500_000)] = "NEFT"   # IMPS cap is Rs 5 lakh
+    out[(out == "IMPS") & (amount > 500_000)] = "NEFT"   
     return out
 
 
@@ -83,7 +63,6 @@ def main() -> None:
     df["src"] = df["src_bank"] + "_" + df["src_acct"]
     df["dst"] = df["dst_bank"] + "_" + df["dst_acct"]
 
-    # minute-level -> second/millisecond-level (random, reproducible)
     ms = rng.integers(0, 60_000, len(df))
     df["ts"] = df["ts"] + pd.to_timedelta(ms, unit="ms")
 

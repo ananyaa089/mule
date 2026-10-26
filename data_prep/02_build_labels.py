@@ -1,14 +1,3 @@
-"""Step 2 - turn HI-Small_Patterns.txt into account-level mule labels.
-
-Input : data/raw/HI-Small_Patterns.txt
-Output: data/clean/labels_base.parquet   (one row per labelled account)
-        data/clean/patterns.parquet      (one row per laundering attempt)
-
-Role rules, per laundering attempt:
-  intermediary : account that both receives and sends inside the pattern (the classic mule)
-  hub          : if no intermediary exists, the centre of a fan-out (sender) / fan-in (receiver)
-  participant  : any other pattern with no intermediary (e.g. bipartite)
-"""
 import csv
 import sys
 from collections import Counter

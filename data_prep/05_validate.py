@@ -60,11 +60,11 @@ def main() -> None:
 
     m = sc[sc["kind"] == "mule"]
     t_min, t_max = tx["ts"].min(), tx["ts"].max()
-    frac = ((m["t0"] - t_min) / (t_max - t_min))
-    thirds = pd.cut(frac, [0, 1 / 3, 2 / 3, 1.0001], labels=["early", "middle", "late"],
-                    include_lowest=True).value_counts()
-    check("mules spread over the full date range", bool((thirds >= 0.2 * len(m)).all()),
-          str(thirds.to_dict()))
+    q1, q2 = tx.loc[~tx["is_injected"], "ts"].quantile([1 / 3, 2 / 3])   # terciles of base TRAFFIC
+    third = (m["t0"] > q1).astype(int) + (m["t0"] > q2).astype(int)
+    counts = third.value_counts().reindex([0, 1, 2], fill_value=0)
+    check("mules follow base traffic over time (each third of traffic has >= 20%)",
+          bool((counts >= 0.2 * len(m)).all()), str(counts.to_dict()))
 
     # ---------------------------------------------------------------- decoys
     print("\n== decoys ==")

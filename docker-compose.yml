@@ -1,0 +1,22 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: muleguard-db
+    environment:
+      POSTGRES_USER: muleguard
+      POSTGRES_PASSWORD: muleguard
+      POSTGRES_DB: muleguard
+    ports:
+      - "5433:5432"          # host port 5433 so it never clashes with a Postgres you already have
+    volumes:
+      - muleguard_pg:/var/lib/postgresql/data
+    shm_size: 1gb
+    command: >
+      postgres
+      -c shared_buffers=1GB
+      -c work_mem=64MB
+      -c maintenance_work_mem=512MB
+      -c max_parallel_workers_per_gather=2
+      -c synchronous_commit=off
+volumes:
+  muleguard_pg:

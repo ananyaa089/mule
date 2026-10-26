@@ -75,9 +75,16 @@ def main() -> None:
     def at(t0, seconds):
         return t0 + pd.Timedelta(milliseconds=int(round(seconds * 1000)))
 
+    # Scenario start times follow the BASE traffic: the IBM data is dense early and thin late,
+    # so uniform-in-time injection would make the late period almost all fake cases.
+    base_ts = base["ts"].to_numpy()          # sorted by step 1
+
     def rand_ts(lo, hi):
-        secs = rng.uniform(0, max((hi - lo).total_seconds(), 1.0))
-        return at(lo, secs)
+        i0 = int(np.searchsorted(base_ts, lo.to_datetime64()))
+        i1 = int(np.searchsorted(base_ts, hi.to_datetime64()))
+        if i1 - i0 < 100:                    # almost no base traffic here: fall back to uniform
+            return at(lo, rng.uniform(0, max((hi - lo).total_seconds(), 1.0)))
+        return at(pd.Timestamp(base_ts[int(rng.integers(i0, i1))]), rng.uniform(0, 1))
 
     # Channel for injected rows is sampled from the BASE data's own electronic-channel mix
     # for the same amount range. A hand-picked mix (e.g. mostly IMPS/UPI) would make the
@@ -110,7 +117,7 @@ def main() -> None:
     # ------------------------------------------------------------ mule scenarios
     kinds = list(MULE_KIND_WEIGHTS)
     kp = np.array(list(MULE_KIND_WEIGHTS.values())) / sum(MULE_KIND_WEIGHTS.values())
-    mule_lo, mule_hi = t_min + pd.Timedelta(seconds=margin), t_max - pd.Timedelta(seconds=margin + 1200)
+    mule_lo, mule_hi = t_min, t_max - pd.Timedelta(seconds=margin + 1200)   # no start margin: early traffic is the densest
 
     for k in range(1, N_MULE_SCENARIOS + 1):
         cid, kind = f"MULE-{k:04d}", str(rng.choice(kinds, p=kp))
@@ -153,7 +160,7 @@ def main() -> None:
 
     def pick_t0(length_s):
         hi = t_max - pd.Timedelta(seconds=length_s + margin)
-        lo = t_min + pd.Timedelta(seconds=margin)
+        lo = t_min
         return rand_ts(lo, max(hi, lo))
 
     for k in range(1, N_DECOY_SCENARIOS + 1):
