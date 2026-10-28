@@ -1,3 +1,17 @@
+"""PyTorch autoencoder anomaly model: "does this account behave unlike ordinary accounts?"
+
+    python src/anomaly.py                 # train on normal train-window accounts, score all windows, evaluate
+
+Idea: an autoencoder squeezes an account's behaviour through a narrow bottleneck and tries to rebuild it. It learns
+to rebuild ORDINARY accounts well; an account that behaves unlike them is rebuilt badly -> high reconstruction error.
+No mule labels are needed to *score*. Labels are used for two things only: leaving confirmed mules out of the
+training set, and the evaluation printed at the end. Decoys (legitimate) stay in the training set.
+
+Output per account: anomaly_pct = share of normal TRAIN accounts with a smaller error (0.99 = more unusual than 99%),
+plus the features that deviate most (for the investigation report).
+Writes models/anomaly_ae.pt, models/anomaly_meta.json and table anomaly_scores(split, acct_id, recon_error, anomaly_pct).
+Importable: score_account(conn, acct) -> compact dict.
+"""
 import json
 import os
 from pathlib import Path
